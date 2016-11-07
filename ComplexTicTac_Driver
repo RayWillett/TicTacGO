@@ -1,9 +1,9 @@
 
-public class ComplexTicTac_Driver {
+public class SimpleChess_Driver {
 
 	public static void main(String[] args) {
-		ComplexTicTac c = new ComplexTicTac(4);
-		c.play();
+		SimpleChess s = new SimpleChess();
+		s.play();
 	}
 
 }
