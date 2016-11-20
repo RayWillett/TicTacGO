@@ -1,9 +1,0 @@
-
-public class SimpleChess_Driver {
-
-	public static void main(String[] args) {
-		SimpleChess s = new SimpleChess();
-		s.play();
-	}
-
-}
