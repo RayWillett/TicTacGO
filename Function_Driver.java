@@ -1,9 +1,9 @@
 import java.io.IOException;
 
-public class Function_Driver {
+public class NeuralNetwork_Driver {
 
 	public static void main(String[] args) {
-		Function f = new Function();
+		NeuralNetwork f = new NeuralNetwork();
 		
 		String trainingFile = ".\\src\\training.txt";
 		String validationFile = ".\\src\\validation.txt";
@@ -12,7 +12,7 @@ public class Function_Driver {
 		
 		try {
 			f.loadTrainingData(trainingFile);
-			f.setParameters(4, 10000, 0.9, 1738);
+			f.setParameters(9, 100000, 1738, 0.9);
 			f.train();
 			f.validate(validationFile);
 			f.testData(testFile, outputFile);
