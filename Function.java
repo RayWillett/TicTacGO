@@ -3,352 +3,307 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
 
-public class Function {
-	// I/O
-	private ArrayList<Record> records;
+public class NeuralNetwork {
+	private class Record {
+		private double[] input;
+		private double[] output;
+		
+		private Record(double[] input, double[] output){
+			this.input = input;
+			this.output = output;
+		}
+	}
 
 	private int numberRecords;
 	private int numberInputs;
 	private int numberOutputs;
-
-	// Hidden
-	private int numberHidden;
-	private int numberIterations;
-	private double learningRate;
-
-	// Neuron value lists
-	private double[] input;
-	private double[] hidden;
-	private double[] output;
-
-	private double[] errorHidden;
-	private double[] errorOut;
-
-	private double[] thetaHidden;
-	private double[] thetaOut;
-
-	// Weights
-	private double[][] inputWeights; // from input to hidden layer
-	private double[][] outputWeights; // from hidden to output layer
-
-	// For Normalizing Data
-	private double[] inputMin;
-	private double[] inputMax;
-	private double[] outputMin;
-	private double[] outputMax;
-
-	public Function() {
-		/*** ZERO PARAMETERS ***/
-		this.numberRecords = this.numberHidden = this.numberInputs = this.numberIterations = 0;
-		this.learningRate = this.numberOutputs = 0;
-
-		/*** CLEAR NEURON LISTS VALUES ***/
-		this.records = null;
-		this.input = null;
-		this.hidden = null;
-		this.output = null;
-		this.errorHidden = null;
-		this.errorOut = null;
-		this.thetaHidden = null;
-		this.thetaOut = null;
-		this.thetaOut = null;
-		this.inputWeights = null;
-		this.outputWeights = null;
-	}
-
-	public void loadTrainingData(String filename) throws IOException {
-		Scanner in = new Scanner(new File(filename));
-		
-		this.numberRecords = in.nextInt();
-		this.numberInputs = in.nextInt();
-		this.numberOutputs = in.nextInt();
-		
-		this.records = new ArrayList<Record>();
-		
-		for(int i = 0; i < this.numberRecords; i++) {
-			double[] inputValues = new double[this.numberInputs];
-			for(int j = 0; j < this.numberInputs; j++) {
-				inputValues[j] = in.nextDouble(); //load value from file
-			}
-			
-			double[] outputValues = new double[this.numberOutputs];
-			for(int j = 0; j < this.numberOutputs; j++) {
-				outputValues[j] = in.nextDouble(); //load output value from file
-			}
-			
-			Record record = new Record(inputValues, outputValues);
-			
-			this.records.add(record);
-		}
-		in.close();
-	}
-
-	public void setParameters(int m, int it, double r, int s) {
-		this.numberHidden = m;
-		this.numberIterations = it;
-		this.learningRate = r;
-
-		Random random = new Random(s);
-
-		this.input = new double[this.numberInputs];
-		this.hidden = new double[this.numberHidden];
-		this.output = new double[this.numberOutputs];
-
-		this.errorHidden = new double[this.numberHidden];
-		this.errorOut = new double[this.numberOutputs];
-
-		this.thetaHidden = new double[this.numberHidden];
-
-		for (int i = 0; i < this.numberHidden; i++) {
-			this.thetaHidden[i] = 2*random.nextDouble() - 1; //between [-1,1]
-		}
-		
-		this.thetaOut = new double[this.numberOutputs];
-		for (int i = 0; i < this.numberOutputs; i++) {
-			this.thetaHidden[i] = 2*random.nextDouble() - 1; //between [-1,1]
-		}
-
-		this.inputWeights = new double[this.numberInputs][this.numberHidden];
-		for(int i = 0; i < this.numberInputs; i++){
-			for(int j = 0; j < this.numberHidden; j++){
-				this.inputWeights[i][j] = 2*random.nextDouble() - 1; //between [-1,1]
-			}
-		}
-		this.outputWeights = new double[this.numberHidden][this.numberOutputs];
-		for(int i = 0; i < this.numberHidden; i++){
-			for(int j = 0; j < this.numberOutputs; j++){
-				this.outputWeights[i][j] = 2*random.nextDouble() - 1; //between [-1,1]
-
-			}
-		}
 	
+	private int numberMiddle;
+	private int numberIterations;
+	private double rate;
+	
+	private ArrayList<Record> records;
+	
+	private double[] input;
+	private double[] middle;
+	private double[] output;
+	
+	private double[] errorMiddle;
+	private double[] errorOut;
+	
+	private double[] thetaMiddle;
+	private double[] thetaOut;
+	
+	private double[][] matrixMiddle;
+	private double[][] matrixOut;
+	
+	
+	private double[] minIn;
+	private double[] maxIn;
+	private double[] maxOut;
+	private double[] minOut;
+	
+	public NeuralNetwork() {				
+		numberRecords = 0;
+		numberInputs = 0;
+		numberOutputs = 0;
+		numberMiddle = 0;
+		numberIterations = 0;
+		rate = 0;
+		
+		records = null;
+		input = null;
+		middle = null;
+		output = null;
+		errorMiddle = null;
+		errorOut = null;
+		thetaMiddle = null;
+		thetaOut = null;
+		matrixMiddle = null;
+		matrixOut = null;
 	}
+	
+	/***/
+	
+	public void loadTrainingData(String trainingFile)  throws IOException {
+		Scanner inFile = new Scanner(new File(trainingFile));
+		
+		numberRecords = inFile.nextInt();
+		numberInputs = inFile.nextInt();
+		numberOutputs = inFile.nextInt();
+		
+		records = new ArrayList<Record>();
+		
+		maxIn = new double[numberInputs];
+		minIn = new double[numberInputs];
+		maxOut = new double[numberOutputs];
+		minOut = new double[numberOutputs];
+		
+		Arrays.fill(minIn, Double.MAX_VALUE);
+		Arrays.fill(maxIn, Double.MIN_VALUE);
+		Arrays.fill(minOut, Double.MAX_VALUE);
+		Arrays.fill(maxOut, Double.MIN_VALUE);
+		
+		
+		for(int i = 0; i < numberRecords; i++) {
+			double[] input = new double[numberInputs];
+			for(int j = 0; j < numberInputs; j++) {
+				input[j] = inFile.nextDouble();
+			}
+			
+			double[] output = new double[numberOutputs];
+			for(int j = 0; j < numberOutputs; j++) {
+				output[j] = inFile.nextDouble();
+			}
+			Record record = new Record(input, output);
+			records.add(record);
+		}
+		inFile.close();
+		
+		for(int i = 0; i < numberRecords; i++) {
+			for(int j = 0; j < numberInputs; j++) {
+				minIn[j] = Math.min(minIn[j], records.get(i).input[j]);
+				maxIn[j] = Math.max(maxIn[j], records.get(i).input[j]);
+			}
+			for(int j = 0; j < numberOutputs; j++){
+				minOut[j] = Math.min(minOut[j], records.get(i).output[j]);
+				maxOut[j] = Math.max(maxOut[j], records.get(i).output[j]);
+			}
+		}
+		
+		for(int i = 0; i < numberRecords; i++) {
+			for(int j = 0; j < numberInputs; j++) {
+				records.get(i).input[j] = (records.get(i).input[j] - minIn[j]) / (maxIn[j] - minIn[j]);
+			}
+			for(int j = 0; j < numberOutputs; j++) {
+				records.get(i).output[j] = (records.get(i).output[j] - minOut[j]) / (maxOut[j]  - minOut[j]);
+			}
+		}
+	}
+	
+	public void setParameters(int numberMiddle, int numberIterations, int seed, double rate) {
+		this.numberMiddle = numberMiddle;
+		this.numberIterations = numberIterations;
+		this.rate = rate;
+		
+		Random rand = new Random(seed);
+		
+		input = new double[numberInputs];
+		middle = new double[numberMiddle];
+		output = new double[numberOutputs];
+		
+		errorMiddle = new double[numberMiddle];
+		errorOut = new double[numberOutputs];
+		
+		thetaMiddle = new double[numberMiddle];
+		for(int i = 0; i < numberMiddle; i++) {
+			thetaMiddle[i] = 2 * rand.nextDouble() - 1;
+		}
 
+		thetaOut = new double[numberOutputs];
+		for(int i = 0; i < numberOutputs; i++){
+			thetaOut[i] = 2 * rand.nextDouble() - 1 ;
+		}
+		
+		matrixMiddle = new double[numberInputs][numberMiddle];
+		for(int i = 0; i < numberInputs; i++) {
+			for(int j = 0; j < numberMiddle; j++) {
+				matrixMiddle[i][j] = 2 * rand.nextDouble() - 1;
+			}
+		}
+		
+		matrixOut = new double[numberMiddle][numberOutputs];
+		for(int i = 0; i < numberMiddle; i++) {
+			for(int j = 0; j < numberOutputs; j++) {
+				matrixOut[i][j] = 2 * rand.nextDouble() - 1;
+			}
+		}
+	}
+	
 	public void train() {
-		scaleTrainingData();
-		for(int i = 0; i < this.numberIterations; i++) { //for each iteration
-			for(int j = 0; j < this.numberRecords; j++) { //for each training datum
-				forwardCalculation(this.records.get(j).input); //do a forward pass
-				backwardCalculation(this.records.get(j).output); //do a backward pass
+		for(int i = 0; i < numberIterations; i++) {
+			for(int j = 0; j < numberRecords; j++) {
+				forwardCalculation(records.get(j).input);
+				backwardCalculation(records.get(j).output);
 			}
 		}
 	}
-
-	private void forwardCalculation(double[] values) {
-		/***   INPUT LAYER   ***/
-		for(int i = 0; i < this.numberInputs; i++) {
-			this.input[i] = values[i]; //input values to the network
+	
+	private void forwardCalculation(double[] trainingInput) {
+		for(int i = 0; i < numberInputs; i++) {
+			input[i] = trainingInput[i];
 		}
 		
-		/***   HIDDEN LAYER   ***/
-		for(int i = 0; i < this.numberHidden; i++) {
+		for(int i = 0; i < numberMiddle; i++) {
 			double sum = 0;
 			
-			for(int j = 0; j < this.numberInputs; j++) {
-				sum += this.input[j] * inputWeights[j][i]; //sum the weights*the input together
+			for(int j = 0; j < numberInputs; j++) {
+				sum += input[j] * matrixMiddle[j][i];
 			}
-			sum += thetaHidden[i]; //add this node's theta value
+			sum += thetaMiddle[i];
 			
-			this.hidden[i] = 1/(1 + Math.exp(-sum)); //pass value to hidden layer
+			middle[i] = 1 / (1 + Math.exp(-sum));
 		}
 		
-		/***   OUTPUT LAYER   ***/
-		for(int i = 0; i < this.numberOutputs; i++) {
+		for(int i = 0; i < numberOutputs; i++) {
 			double sum = 0;
-			for(int j = 0; j < this.numberHidden; j++) {
-				sum += this.hidden[i] * this.outputWeights[j][i]; //sum th weights*the input
+			
+			for(int j = 0; j < numberMiddle; j++) {
+				sum += middle[j] * matrixOut[j][i];
 			}
-			sum += thetaOut[i]; //add this nodes theta
-			this.output[i] = 1/(1 + Math.exp(-sum)); //padd the value to the output layer
+			
+			sum += thetaOut[i];
+			
+			output[i] = 1 / (1 + Math.exp(-sum));
 		}
 	}
-
-	private void backwardCalculation(double[] values){
-		/***   COMPUTING ERRORS   ***/
-		
-		/****    OUTPUT LAYER    ****/
-		for(int i = 0; i < this.numberOutputs; i++){
-			this.errorOut[i] = this.output[i] * (1 - this.output[i]) * (values[i] - this.output[i]);
+	
+	private void backwardCalculation(double[] trainingOutput) {
+		for(int i = 0; i < numberOutputs; i++) {
+			errorOut[i] = output[i] * (1 - output[i]) * (trainingOutput[i] - output[i]);
 		}
 		
-		/****    HIDDEN LAYER    ****/
-		for(int i = 0; i < this.numberHidden; i++) {
+		for( int i = 0; i < numberMiddle; i++) {
 			double sum = 0;
-			for(int j = 0; j < this.numberOutputs; j++) {
-				sum += this.outputWeights[i][j] * this.errorOut[j];
+			for(int j = 0; j < numberOutputs; j++) {
+				sum += matrixOut[i][j] * errorOut[j];
 			}
-			this.errorHidden[i] = this.hidden[i] * (1 - this.hidden[i]) * sum;
+			
+			errorMiddle[i] = middle[i] * (1 - middle[i]) * sum;
 		}
 		
-		/***   UPDATE WEIGHTS   ***/
-		
-		/****    OUTPUT LAYER    ****/
-		for(int i = 0; i < this.numberHidden; i++) {
-			for(int j = 0; j < this.numberOutputs; j++){
-				this.outputWeights[i][j] += this.learningRate * this.hidden[i] * this.errorOut[j];
+		for(int i = 0; i < numberMiddle; i++) {
+			for(int j = 0; j < numberOutputs; j++) {
+				matrixOut[i][j] += rate*middle[i]*errorOut[j];
 			}
 		}
 		
-		/****    INPUT LAYER    ****/
-		for(int i = 0; i < this.numberInputs; i++) {
-			for(int j = 0; j < this.numberHidden; j++) {
-				this.inputWeights[i][j] += this.learningRate * this.hidden[i] * this.errorHidden[j];
+		for(int i = 0; i < numberInputs; i++) {
+			for(int j = 0; j < numberMiddle; j++) {
+				matrixMiddle[i][j] += rate * input[i] * errorMiddle[j];
 			}
 		}
 		
-		/***   UPDATE THETAS   ***/
-		
-		/****    OUTPUT LAYER    ****/
-		for(int i = 0; i < this.numberOutputs; i++) {
-			this.thetaOut[i] += this.learningRate * this.errorOut[i];
+		for(int i = 0; i < numberOutputs; i++) {
+			thetaOut[i] += rate * errorOut[i];
 		}
-		/****    HIDDEN LAYER    ****/
-		for(int i = 0; i < this.numberHidden; i++) {
-			this.thetaHidden[i] += this.learningRate * this.errorHidden[i];
+		
+		for(int i = 0; i < numberMiddle; i++ ) {
+			thetaMiddle[i] += rate * errorMiddle[i]; 
 		}
 	}
-
+	
 	private double[] test(double[] input) {
 		forwardCalculation(input);
-		return this.output; //a reference to the output
-	}
-
-	public void testData(String inFile, String outFile) throws IOException {
-		Scanner in = new Scanner(new File(inFile));
-		PrintWriter out = new PrintWriter(new FileWriter(outFile));
-		
-		int n = in.nextInt(); //get number of records to test
-		
-		for(int i = 0; i < n; i++) {
-			double[] inputValues = new double[this.numberInputs];
-			
-			for(int j = 0; j < this.numberInputs; j++) {
-				inputValues[j] = (in.nextDouble() - this.inputMin[j]) / (this.inputMax[j] - this.inputMin[j]); //normalize Datum
-			}
-			
-			double[] outputValues = test(inputValues);
-			
-			for(int j = 0; j < this.numberOutputs; j++) {
-				out.print((outputValues[j]*(this.outputMax[j] - this.outputMin[j]) + this.outputMin[j]) + " "); //un-normalize output
-			}
-			out.println();
-		}
-		out.close();
-		in.close();
-	}
-
-	public void validate(String filename) throws IOException {
-		Scanner in = new Scanner(new File(filename));
-		
-		int n = in.nextInt(); //number of records to validate with
-		
-		double error = 0;
-		for(int i = 0; i < n; i++) {
-			double[] inputValues = new double[this.numberInputs];
-			for(int j = 0; j < this.numberInputs; j++) {
-				inputValues[j] = (in.nextDouble() - this.inputMin[j]) / (this.inputMax[j] - this.inputMin[j]); //normalize datum from file
-			}
-			
-			double[] outputValues = new double[this.numberOutputs];
-			for(int j = 0; j < this.numberOutputs; j++) {
-				outputValues[j] = in.nextDouble(); //get the actual output from the file
-			}
-			
-			double[] predictedOutput = test(inputValues); //feed the input into the function
-			
-			for(int j = 0; j < this.numberOutputs; j++){
-				predictedOutput[j] = predictedOutput[j]*(this.outputMax[j] - this.outputMin[j]) + this.outputMin[j]; //un-normalize output
-			}
-			
-			error += computeError(outputValues, predictedOutput); //compute the error
-		}
-		
-		System.out.println(error / n); //average error
-		in.close();
-	}
-
-	private double computeError(double[] actual, double[] predicted) {
-		double error = 0;
-		
-		for(int i = 0; i < actual.length; i++) {
-			error += Math.pow((actual[i] - predicted[i]), 2); //sum squares of error
-		}
-		
-		return Math.sqrt(error); //return root sum square
+		return output;
 	}
 	
-	private void scaleTrainingData() {
-		double[] inputMax = new double[this.numberInputs];
-		double[] inputMin = new double[this.numberInputs];
+	public void testData(String inputFile, String outputFile) throws IOException{
+		Scanner inFile = new Scanner( new File(inputFile));
+		PrintWriter outFile = new PrintWriter(new FileWriter(outputFile));
 		
-		double[] outputMax = new double[this.numberOutputs];
-		double[] outputMin = new double[this.numberOutputs];
+		int numberRecords = inFile.nextInt();
 		
-		
-		//initial values
-		for(int i = 0; i < this.numberInputs; i++) {
-			inputMax[i] = Double.MIN_VALUE;
-			inputMin[i] = Double.MAX_VALUE;
-		}
-		for(int i = 0; i < this.numberOutputs; i++) {
-			outputMax[i] = Double.MIN_VALUE;
-			outputMin[i] = Double.MAX_VALUE;
-		}
-		
-		//get the actual min and max values
-		for(int i = 0; i < this.numberRecords; i++) {
-			for(int j = 0; j < this.numberInputs; j++) {
-				if(inputMax[j] < this.records.get(i).input[j]) {
-					inputMax[j] = this.records.get(i).input[j];
-				}
-				if(inputMin[j] > this.records.get(i).input[j]) {
-					inputMin[j] = this.records.get(i).input[j];
-				}
-			}
-			for(int j = 0; j < this.numberOutputs; j++) {
-				if(outputMax[j] < this.records.get(i).output[j]) {
-					outputMax[j] = this.records.get(i).output[j];
-				}
-				if(outputMin[j] > this.records.get(i).output[j]) {
-					outputMin[j] = this.records.get(i).output[j];
-				}
-			}
-		}
-		
-		//scale the data (this mutates the data)
-		for(int i = 0; i < this.numberRecords; i++) {
-			for(int j = 0; j < this.numberInputs; j++) {
-				//inputMin[j] = 0;
-				//inputMax[j] = 1;
-				this.records.get(i).input[j] = (this.records.get(i).input[j] - inputMin[j]) / (inputMax[j] - inputMin[j]);
+		for(int i = 0; i < numberRecords; i++) {
+			double[] input = new double[numberInputs];
+			
+			for(int j = 0; j < numberInputs; j++ ) {
+				input[j] = (inFile.nextDouble() - minIn[j]) / (maxIn[j] - minIn[j]);
 			}
 			
-			for(int j = 0; j < this.numberOutputs; j++) {
-				//outputMin[j] = 0;
-				//outputMax[j] = 1;
-				this.records.get(i).output[j] = (this.records.get(i).output[j] - outputMin[j]) / (outputMax[j] - outputMin[j]);
+			double[] output = test(input);
+			
+			for(int j = 0; j < numberOutputs; j++) {
+				outFile.print(((output[j]*(maxOut[j] - minOut[j])) + minOut[j]) + " ");
 			}
+			outFile.println();
 		}
-		
-		//save the minand max values for validation/testing
-		this.inputMin = inputMin;
-		this.inputMax = inputMax;
-		
-		this.outputMin = outputMin;
-		this.outputMax = outputMax;
+		inFile.close();
+		outFile.close();
 	}
-
-	/*** RECORD CLASS ***/
-	private class Record {
-		private double[] input;
-		private double[] output;
-
-		private Record(double[] in, double[] out) {
-			this.input = in;
-			this.output = out;
+	
+	public void validate(String validationFile) throws IOException {
+		Scanner inFile = new Scanner(new File(validationFile));
+		
+		int numberRecords = inFile.nextInt();
+		double error = 0;
+		
+		for(int i = 0; i < numberRecords; i++) {
+			double[] input = new double[numberInputs];
+			
+			for(int j = 0; j < numberInputs; j++) {
+				input[j] = (inFile.nextDouble() - minIn[j]) / (maxIn[j]  - minIn[j]);
+			}
+			
+			double[] actualOutput = new double[numberOutputs];
+			for(int j = 0; j < numberOutputs; j++) {
+				actualOutput[j] = inFile.nextDouble();
+			}
+			
+			double[] predictedOutput = test(input);
+			
+			for(int j = 0; j < numberOutputs; j++) {
+				predictedOutput[j] = (predictedOutput[j]*(maxOut[j]  - minOut[j])) + minOut[j]; 
+			}
+			
+			error += computeError(actualOutput, predictedOutput);
 		}
+		
+		System.out.println(error / numberRecords);
+		inFile.close();
+	}
+	
+	private double computeError(double[] actualOutput, double[] predictedOutput) {
+		double error = 0;
+		
+		for( int i = 0; i < actualOutput.length; i++ ) {
+			error += Math.pow(actualOutput[i] - predictedOutput[i], 2);
+		}
+		
+		return Math.sqrt(error);
 	}
 }
